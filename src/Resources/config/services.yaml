@@ -5,12 +5,12 @@ services:
     public: false
 
   Jonston\SymfonyPermission\Repository\:
-    resource: '../Repository/*'
+    resource: '../../Repository/*'
     tags: ['doctrine.repository_service']
 
   Jonston\SymfonyPermission\Service\:
-    resource: '../Service/*'
-    exclude: '../Service/*Interface.php'
+    resource: '../../Service/*'
+    exclude: '../../Service/*Interface.php'
 
   # Explicit service definitions
   Jonston\SymfonyPermission\Service\PermissionServiceInterface:

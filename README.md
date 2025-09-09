@@ -4,6 +4,12 @@
 
 ## Установка
 
+### Через Composer
+
+```bash
+composer require jonston/symfony-permission
+```
+
 1. Добавьте бандл в `config/bundles.php`:
 ```php
 <?php

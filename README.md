@@ -1,16 +1,16 @@
 # Symfony Permission Bundle
 
-Базовый бандл для управления разрешениями и ролями в Symfony, похожий на spatie-permission, но с упрощенным функционалом.
+A basic bundle for managing permissions and roles in Symfony, similar to spatie-permission, but with simplified functionality.
 
-## Установка
+## Installation
 
-### Через Composer
+### Via Composer
 
 ```bash
 composer require jonston/symfony-permission
 ```
 
-1. Добавьте бандл в `config/bundles.php`:
+1. Add the bundle to `config/bundles.php`:
 ```php
 <?php
 
@@ -20,21 +20,21 @@ return [
 ];
 ```
 
-2. Импортируйте конфигурацию Doctrine в `config/packages/doctrine.yaml`:
+2. Import Doctrine configuration in `config/packages/doctrine.yaml`:
 ```yaml
 imports:
     - { resource: '../../vendor/jonston/symfony-permission/src/Resources/config/doctrine.yaml' }
 ```
 
-3. Создайте и выполните миграции:
+3. Create and run migrations:
 ```bash
 php bin/console make:migration
 php bin/console doctrine:migrations:migrate
 ```
 
-## Использование
+## Usage
 
-### Создание разрешений
+### Creating permissions
 
 ```php
 use Jonston\SymfonyPermission\Service\PermissionServiceInterface;
@@ -47,22 +47,22 @@ class SomeController
     
     public function createPermission()
     {
-        // Создание разрешения
+        // Create a permission
         $permission = $this->permissionService->createPermission(
             'edit-posts', 
-            'Разрешение на редактирование постов'
+            'Permission to edit posts'
         );
         
-        // Поиск разрешения
+        // Find a permission
         $permission = $this->permissionService->findPermissionByName('edit-posts');
         
-        // Получение всех разрешений
+        // Get all permissions
         $permissions = $this->permissionService->getAllPermissions();
     }
 }
 ```
 
-### Управление ролями
+### Managing roles
 
 ```php
 use Jonston\SymfonyPermission\Service\RoleServiceInterface;
@@ -75,37 +75,37 @@ class RoleController
     
     public function createRole()
     {
-        // Создание роли
+        // Create a role
         $role = $this->roleService->createRole(
             'editor', 
-            'Редактор контента'
+            'Content editor'
         );
         
-        // Назначение разрешений роли
+        // Assign permissions to the role
         $this->roleService->assignPermissionsByNamesToRole(
             $role, 
             ['edit-posts', 'create-posts']
         );
         
-        // Проверка разрешения
+        // Check permission
         $hasPermission = $role->hasPermissionByName('edit-posts');
     }
 }
 ```
 
-## Структура базы данных
+## Database structure
 
-Бандл создаст следующие таблицы:
-- `permissions` - таблица разрешений
-- `roles` - таблица ролей  
-- `role_permissions` - связующая таблица many-to-many
+The bundle will create the following tables:
+- `permissions` - permissions table
+- `roles` - roles table
+- `role_permissions` - many-to-many pivot table
 
-## Функционал
+## Features
 
-- ✅ Создание, обновление, удаление разрешений
-- ✅ Создание, обновление, удаление ролей
-- ✅ Назначение разрешений ролям
-- ✅ Отзыв разрешений у ролей
-- ✅ Проверка наличия разрешений у роли
-- ✅ Следование принципам SOLID
-- ✅ Использование репозиториев для работы с данными
+- ✅ Create, update, delete permissions
+- ✅ Create, update, delete roles
+- ✅ Assign permissions to roles
+- ✅ Revoke permissions from roles
+- ✅ Check if a role has a permission
+- ✅ Follows SOLID principles
+- ✅ Uses repositories for data access

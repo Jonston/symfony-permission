@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Jonston\SymfonyPermission\Tests\Service;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Jonston\SymfonyPermission\Entity\Permission;
 use Jonston\SymfonyPermission\Entity\Role;
 use Jonston\SymfonyPermission\Repository\RoleRepository;
@@ -14,40 +15,36 @@ use PHPUnit\Framework\TestCase;
 
 class RoleServiceTest extends TestCase
 {
+    private RoleService $roleService;
+    private EntityManagerInterface|MockObject $entityManager;
     private RoleRepository|MockObject $roleRepository;
     private PermissionServiceInterface|MockObject $permissionService;
-    private RoleService $roleService;
 
     protected function setUp(): void
     {
+        $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->roleRepository = $this->createMock(RoleRepository::class);
         $this->permissionService = $this->createMock(PermissionServiceInterface::class);
-        $this->roleService = new RoleService($this->roleRepository, $this->permissionService);
+
+        $this->roleService = new RoleService(
+            $this->entityManager,
+            $this->roleRepository,
+            $this->permissionService
+        );
     }
 
     public function testCreateRole(): void
     {
-        $name = 'admin';
-        $description = 'Administrator role';
+        $this->entityManager->expects($this->once())
+            ->method('persist');
+        $this->entityManager->expects($this->once())
+            ->method('flush');
 
-        $this->roleRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with($name)
-            ->willReturn(null);
+        $role = $this->roleService->create('admin', 'web');
 
-        $this->roleRepository
-            ->expects($this->once())
-            ->method('save')
-            ->with($this->callback(function (Role $role) use ($name, $description) {
-                return $role->getName() === $name && $role->getDescription() === $description;
-            }));
-
-        $result = $this->roleService->createRole($name, $description);
-
-        $this->assertInstanceOf(Role::class, $result);
-        $this->assertEquals($name, $result->getName());
-        $this->assertEquals($description, $result->getDescription());
+        $this->assertInstanceOf(Role::class, $role);
+        $this->assertEquals('admin', $role->getName());
+        $this->assertEquals('web', $role->getGuardName());
     }
 
     public function testCreateRoleWithExistingName(): void
@@ -295,5 +292,92 @@ class RoleServiceTest extends TestCase
         $result = $this->roleService->findRolesByNames($names);
 
         $this->assertSame($roles, $result);
+    }
+
+    public function testAssignRoleToModel(): void
+    {
+        $model = new class {
+            private int $id = 1;
+            public function getId(): int { return $this->id; }
+        };
+
+        $role = new Role();
+        $role->setName('admin');
+
+        $this->roleRepository->expects($this->once())
+            ->method('findOneBy')
+            ->with(['name' => 'admin'])
+            ->willReturn($role);
+
+        $modelHasRoleRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $modelHasRoleRepo->expects($this->once())
+            ->method('findOneBy')
+            ->willReturn(null); // No existing assignment
+
+        $this->entityManager->expects($this->any())
+            ->method('getRepository')
+            ->willReturn($modelHasRoleRepo);
+
+        $this->entityManager->expects($this->once())
+            ->method('persist');
+        $this->entityManager->expects($this->once())
+            ->method('flush');
+
+        $this->roleService->assignRoleTo($model, 'admin');
+    }
+
+    public function testAssignRoleToModelThrowsExceptionForNonExistentRole(): void
+    {
+        $model = new class {
+            private int $id = 1;
+            public function getId(): int { return $this->id; }
+        };
+
+        $this->roleRepository->expects($this->once())
+            ->method('findOneBy')
+            ->with(['name' => 'non-existent'])
+            ->willReturn(null);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Role 'non-existent' not found");
+
+        $this->roleService->assignRoleTo($model, 'non-existent');
+    }
+
+    public function testSyncRoles(): void
+    {
+        $model = new class {
+            private int $id = 1;
+            public function getId(): int { return $this->id; }
+        };
+
+        $adminRole = new Role();
+        $adminRole->setName('admin');
+
+        $editorRole = new Role();
+        $editorRole->setName('editor');
+
+        $this->roleRepository->expects($this->exactly(2))
+            ->method('findOneBy')
+            ->willReturnMap([
+                [['name' => 'admin'], null, null, $adminRole],
+                [['name' => 'editor'], null, null, $editorRole]
+            ]);
+
+        $modelHasRoleRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $modelHasRoleRepo->expects($this->once())
+            ->method('findBy')
+            ->willReturn([]); // No existing roles
+
+        $this->entityManager->expects($this->any())
+            ->method('getRepository')
+            ->willReturn($modelHasRoleRepo);
+
+        $this->entityManager->expects($this->exactly(2))
+            ->method('persist');
+        $this->entityManager->expects($this->once())
+            ->method('flush');
+
+        $this->roleService->syncRoles($model, ['admin', 'editor']);
     }
 }

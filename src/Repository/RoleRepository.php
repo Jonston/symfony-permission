@@ -18,21 +18,22 @@ class RoleRepository extends ServiceEntityRepository
         parent::__construct($registry, Role::class);
     }
 
-    public function save(Role $role): void
-    {
-        $this->getEntityManager()->persist($role);
-        $this->getEntityManager()->flush();
-    }
-
-    public function remove(Role $role): void
-    {
-        $this->getEntityManager()->remove($role);
-        $this->getEntityManager()->flush();
-    }
-
     public function findByName(string $name): ?Role
     {
         return $this->findOneBy(['name' => $name]);
+    }
+
+    /**
+     * @param string[] $names
+     * @return Role[]
+     */
+    public function findByNames(array $names): array
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.name IN (:names)')
+            ->setParameter('names', $names)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -46,29 +47,15 @@ class RoleRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    /**
-     * @param string[] $names
-     * @return Role[]
-     */
-    public function findByNames(array $names): array
+    public function save(Role $role): void
     {
-        return $this->createQueryBuilder('r')
-            ->where('r.name IN (:names)')
-            ->setParameter('names', $names)
-            ->getQuery()
-            ->getResult();
+        $this->getEntityManager()->persist($role);
+        $this->getEntityManager()->flush();
     }
 
-    /**
-     * @return Role[]
-     */
-    public function findWithPermissions(): array
+    public function remove(Role $role): void
     {
-        return $this->createQueryBuilder('r')
-            ->leftJoin('r.permissions', 'p')
-            ->addSelect('p')
-            ->orderBy('r.name', 'ASC')
-            ->getQuery()
-            ->getResult();
+        $this->getEntityManager()->remove($role);
+        $this->getEntityManager()->flush();
     }
 }

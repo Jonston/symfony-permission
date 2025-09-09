@@ -9,7 +9,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: 'Jonston\SymfonyPermission\Repository\PermissionRepository')]
 #[ORM\Table(name: 'permissions')]
 class Permission
 {
@@ -22,10 +22,7 @@ class Permission
     private string $name;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private ?string $description;
-
-    #[ORM\ManyToMany(targetEntity: Role::class, mappedBy: 'permissions')]
-    private Collection $roles;
+    private ?string $guardName = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private DateTimeImmutable $createdAt;
@@ -33,11 +30,22 @@ class Permission
     #[ORM\Column(type: 'datetime_immutable')]
     private DateTimeImmutable $updatedAt;
 
-    public function __construct(string $name, ?string $description = null)
+    /**
+     * @var Collection<int, Role>
+     */
+    #[ORM\ManyToMany(targetEntity: Role::class, mappedBy: 'permissions')]
+    private Collection $roles;
+
+    /**
+     * @var Collection<int, ModelHasPermission>
+     */
+    #[ORM\OneToMany(mappedBy: 'permission', targetEntity: ModelHasPermission::class, cascade: ['persist', 'remove'])]
+    private Collection $modelHasPermissions;
+
+    public function __construct()
     {
-        $this->name = $name;
-        $this->description = $description;
         $this->roles = new ArrayCollection();
+        $this->modelHasPermissions = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
     }
@@ -60,22 +68,17 @@ class Permission
         return $this;
     }
 
-    public function getDescription(): ?string
+    public function getGuardName(): ?string
     {
-        return $this->description;
+        return $this->guardName;
     }
 
-    public function setDescription(?string $description): self
+    public function setGuardName(?string $guardName): self
     {
-        $this->description = $description;
+        $this->guardName = $guardName;
         $this->updatedAt = new DateTimeImmutable();
 
         return $this;
-    }
-
-    public function getRoles(): Collection
-    {
-        return $this->roles;
     }
 
     public function getCreatedAt(): DateTimeImmutable
@@ -86,5 +89,79 @@ class Permission
     public function getUpdatedAt(): DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    /**
+     * @return Collection<int, Role>
+     */
+    public function getRoles(): Collection
+    {
+        return $this->roles;
+    }
+
+    /**
+     * @return Collection<int, ModelHasPermission>
+     */
+    public function getModelHasPermissions(): Collection
+    {
+        return $this->modelHasPermissions;
+    }
+
+    public function __toString(): string
+    {
+        return $this->name;
+    }
+
+    // Internal methods for Doctrine collection management (used by services only)
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function addRole(Role $role): self
+    {
+        if (!$this->roles->contains($role)) {
+            $this->roles->add($role);
+        }
+        $this->updatedAt = new DateTimeImmutable();
+
+        return $this;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function removeRole(Role $role): self
+    {
+        $this->roles->removeElement($role);
+        $this->updatedAt = new DateTimeImmutable();
+
+        return $this;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function addModelHasPermission(ModelHasPermission $modelHasPermission): self
+    {
+        if (!$this->modelHasPermissions->contains($modelHasPermission)) {
+            $this->modelHasPermissions->add($modelHasPermission);
+            $modelHasPermission->setPermission($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function removeModelHasPermission(ModelHasPermission $modelHasPermission): self
+    {
+        if ($this->modelHasPermissions->removeElement($modelHasPermission)) {
+            if ($modelHasPermission->getPermission() === $this) {
+                $modelHasPermission->setPermission(null);
+            }
+        }
+
+        return $this;
     }
 }

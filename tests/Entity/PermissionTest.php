@@ -12,58 +12,50 @@ class PermissionTest extends TestCase
 {
     public function testPermissionCreation(): void
     {
-        $permission = new Permission('edit-posts', 'Permission to edit posts');
+        $permission = new Permission();
+        $permission->setName('edit-posts');
+        $permission->setGuardName('web');
 
-        $this->assertNull($permission->getId());
         $this->assertEquals('edit-posts', $permission->getName());
-        $this->assertEquals('Permission to edit posts', $permission->getDescription());
+        $this->assertEquals('web', $permission->getGuardName());
         $this->assertInstanceOf(\DateTimeImmutable::class, $permission->getCreatedAt());
         $this->assertInstanceOf(\DateTimeImmutable::class, $permission->getUpdatedAt());
-        $this->assertCount(0, $permission->getRoles());
     }
 
-    public function testPermissionCreationWithoutDescription(): void
+    public function testPermissionToString(): void
     {
-        $permission = new Permission('delete-posts');
+        $permission = new Permission();
+        $permission->setName('edit-posts');
 
-        $this->assertEquals('delete-posts', $permission->getName());
-        $this->assertNull($permission->getDescription());
-    }
-
-    public function testSetName(): void
-    {
-        $permission = new Permission('old-name');
-        $originalUpdatedAt = $permission->getUpdatedAt();
-
-        // Wait a moment to ensure different timestamps
-        usleep(1000);
-
-        $permission->setName('new-name');
-
-        $this->assertEquals('new-name', $permission->getName());
-        $this->assertGreaterThan($originalUpdatedAt, $permission->getUpdatedAt());
-    }
-
-    public function testSetDescription(): void
-    {
-        $permission = new Permission('test-permission');
-        $originalUpdatedAt = $permission->getUpdatedAt();
-
-        usleep(1000);
-
-        $permission->setDescription('New description');
-
-        $this->assertEquals('New description', $permission->getDescription());
-        $this->assertGreaterThan($originalUpdatedAt, $permission->getUpdatedAt());
+        $this->assertEquals('edit-posts', (string) $permission);
     }
 
     public function testRoleRelationship(): void
     {
-        $permission = new Permission('test-permission');
-        $role = new Role('test-role');
+        $permission = new Permission();
+        $permission->setName('edit-posts');
 
-        $role->addPermission($permission);
+        $role = new Role();
+        $role->setName('editor');
+
+        $permission->addRole($role);
 
         $this->assertTrue($permission->getRoles()->contains($role));
+        $this->assertTrue($role->getPermissions()->contains($permission));
+    }
+
+    public function testPermissionRemoveRole(): void
+    {
+        $permission = new Permission();
+        $permission->setName('edit-posts');
+
+        $role = new Role();
+        $role->setName('editor');
+
+        $permission->addRole($role);
+        $permission->removeRole($role);
+
+        $this->assertFalse($permission->getRoles()->contains($role));
+        $this->assertFalse($role->getPermissions()->contains($permission));
     }
 }

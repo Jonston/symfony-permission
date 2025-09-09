@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Jonston\SymfonyPermission\Entity;
 
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: 'Jonston\SymfonyPermission\Repository\RoleRepository')]
 #[ORM\Table(name: 'roles')]
 class Role
 {
@@ -21,25 +22,37 @@ class Role
     private string $name;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private ?string $description = null;
+    private ?string $guardName = null;
 
+    #[ORM\Column(type: 'datetime_immutable')]
+    private DateTimeImmutable $createdAt;
+
+    #[ORM\Column(type: 'datetime_immutable')]
+    private DateTimeImmutable $updatedAt;
+
+    /**
+     * @var Collection<int, Permission>
+     */
     #[ORM\ManyToMany(targetEntity: Permission::class, inversedBy: 'roles')]
-    #[ORM\JoinTable(name: 'role_permissions')]
+    #[ORM\JoinTable(
+        name: 'role_permission',
+        joinColumns: [new ORM\JoinColumn(name: 'role_id', referencedColumnName: 'id')],
+        inverseJoinColumns: [new ORM\JoinColumn(name: 'permission_id', referencedColumnName: 'id')]
+    )]
     private Collection $permissions;
 
-    #[ORM\Column(type: 'datetime_immutable')]
-    private \DateTimeImmutable $createdAt;
+    /**
+     * @var Collection<int, ModelHasRole>
+     */
+    #[ORM\OneToMany(mappedBy: 'role', targetEntity: ModelHasRole::class, cascade: ['persist', 'remove'])]
+    private Collection $modelHasRoles;
 
-    #[ORM\Column(type: 'datetime_immutable')]
-    private \DateTimeImmutable $updatedAt;
-
-    public function __construct(string $name, ?string $description = null)
+    public function __construct()
     {
-        $this->name = $name;
-        $this->description = $description;
         $this->permissions = new ArrayCollection();
-        $this->createdAt = new \DateTimeImmutable();
-        $this->updatedAt = new \DateTimeImmutable();
+        $this->modelHasRoles = new ArrayCollection();
+        $this->createdAt = new DateTimeImmutable();
+        $this->updatedAt = new DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -55,57 +68,46 @@ class Role
     public function setName(string $name): self
     {
         $this->name = $name;
-        $this->updatedAt = new \DateTimeImmutable();
+        $this->updatedAt = new DateTimeImmutable();
 
         return $this;
     }
 
-    public function getDescription(): ?string
+    public function getGuardName(): ?string
     {
-        return $this->description;
+        return $this->guardName;
     }
 
-    public function setDescription(?string $description): self
+    public function setGuardName(?string $guardName): self
     {
-        $this->description = $description;
-        $this->updatedAt = new \DateTimeImmutable();
+        $this->guardName = $guardName;
+        $this->updatedAt = new DateTimeImmutable();
 
         return $this;
     }
 
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    /**
+     * @return Collection<int, Permission>
+     */
     public function getPermissions(): Collection
     {
         return $this->permissions;
     }
 
-    public function addPermission(Permission $permission): self
-    {
-        if (!$this->permissions->contains($permission)) {
-            $this->permissions->add($permission);
-            $permission->getRoles()->add($this); // Добавляем обратную связь
-            $this->updatedAt = new \DateTimeImmutable();
-        }
-
-        return $this;
-    }
-
-    public function removePermission(Permission $permission): self
-    {
-        if ($this->permissions->contains($permission)) {
-            $this->permissions->removeElement($permission);
-            $permission->getRoles()->removeElement($this); // Удаляем обратную связь
-            $this->updatedAt = new \DateTimeImmutable();
-        }
-
-        return $this;
-    }
-
-    public function hasPermission(Permission $permission): bool
-    {
-        return $this->permissions->contains($permission);
-    }
-
-    public function hasPermissionByName(string $permissionName): bool
+    /**
+     * Check if role has specific permission (read-only operation)
+     */
+    public function hasPermission(string $permissionName): bool
     {
         foreach ($this->permissions as $permission) {
             if ($permission->getName() === $permissionName) {
@@ -116,13 +118,70 @@ class Role
         return false;
     }
 
-    public function getCreatedAt(): \DateTimeImmutable
+    /**
+     * @return Collection<int, ModelHasRole>
+     */
+    public function getModelHasRoles(): Collection
     {
-        return $this->createdAt;
+        return $this->modelHasRoles;
     }
 
-    public function getUpdatedAt(): \DateTimeImmutable
+    public function __toString(): string
     {
-        return $this->updatedAt;
+        return $this->name;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function addPermission(Permission $permission): self
+    {
+        if (!$this->permissions->contains($permission)) {
+            $this->permissions->add($permission);
+            $permission->addRole($this);
+        }
+        $this->updatedAt = new DateTimeImmutable();
+
+        return $this;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function removePermission(Permission $permission): self
+    {
+        if ($this->permissions->removeElement($permission)) {
+            $permission->removeRole($this);
+        }
+        $this->updatedAt = new DateTimeImmutable();
+
+        return $this;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function addModelHasRole(ModelHasRole $modelHasRole): self
+    {
+        if (!$this->modelHasRoles->contains($modelHasRole)) {
+            $this->modelHasRoles->add($modelHasRole);
+            $modelHasRole->setRole($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @internal Used by services only - do not call directly
+     */
+    public function removeModelHasRole(ModelHasRole $modelHasRole): self
+    {
+        if ($this->modelHasRoles->removeElement($modelHasRole)) {
+            if ($modelHasRole->getRole() === $this) {
+                $modelHasRole->setRole(null);
+            }
+        }
+
+        return $this;
     }
 }

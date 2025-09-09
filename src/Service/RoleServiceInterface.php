@@ -9,40 +9,25 @@ use Jonston\SymfonyPermission\Entity\Role;
 
 interface RoleServiceInterface
 {
-    public function createRole(string $name, ?string $description = null): Role;
+    public function create(string $name, ?string $guardName = null): Role;
 
-    public function updateRole(Role $role, string $name, ?string $description = null): Role;
+    public function findByName(string $name): ?Role;
 
-    public function deleteRole(Role $role): void;
+    public function findById(int $id): ?Role;
 
-    public function findRoleByName(string $name): ?Role;
+    public function getAll(): array;
 
-    public function findRoleById(int $id): ?Role;
+    public function update(Role $role): Role;
 
-    /**
-     * @return Role[]
-     */
-    public function getAllRoles(): array;
+    public function delete(Role $role): void;
 
-    /**
-     * @param string[] $names
-     * @return Role[]
-     */
-    public function findRolesByNames(array $names): array;
+    public function assignRoleTo(object $model, string $roleName): void;
 
-    public function assignPermissionToRole(Role $role, Permission $permission): Role;
+    public function removeRoleFrom(object $model, string $roleName): void;
 
-    public function revokePermissionFromRole(Role $role, Permission $permission): Role;
+    public function hasRole(object $model, string $roleName): bool;
 
-    /**
-     * @param Permission[] $permissions
-     */
-    public function assignPermissionsToRole(Role $role, array $permissions): Role;
+    public function getModelRoles(object $model): array;
 
-    /**
-     * @param string[] $permissionNames
-     */
-    public function assignPermissionsByNamesToRole(Role $role, array $permissionNames): Role;
-
-    public function revokeAllPermissionsFromRole(Role $role): Role;
+    public function syncRoles(object $model, array $roleNames): void;
 }

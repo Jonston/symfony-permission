@@ -12,125 +12,64 @@ class RoleTest extends TestCase
 {
     public function testRoleCreation(): void
     {
-        $role = new Role('admin', 'Administrator role');
+        $role = new Role();
+        $role->setName('admin');
+        $role->setGuardName('web');
 
-        $this->assertNull($role->getId());
         $this->assertEquals('admin', $role->getName());
-        $this->assertEquals('Administrator role', $role->getDescription());
+        $this->assertEquals('web', $role->getGuardName());
         $this->assertInstanceOf(\DateTimeImmutable::class, $role->getCreatedAt());
         $this->assertInstanceOf(\DateTimeImmutable::class, $role->getUpdatedAt());
-        $this->assertCount(0, $role->getPermissions());
     }
 
-    public function testRoleCreationWithoutDescription(): void
+    public function testRoleToString(): void
     {
-        $role = new Role('user');
+        $role = new Role();
+        $role->setName('admin');
 
-        $this->assertEquals('user', $role->getName());
-        $this->assertNull($role->getDescription());
+        $this->assertEquals('admin', (string) $role);
     }
 
-    public function testSetName(): void
+    public function testPermissionRelationship(): void
     {
-        $role = new Role('old-name');
-        $originalUpdatedAt = $role->getUpdatedAt();
+        $role = new Role();
+        $role->setName('admin');
 
-        usleep(1000);
-
-        $role->setName('new-name');
-
-        $this->assertEquals('new-name', $role->getName());
-        $this->assertGreaterThan($originalUpdatedAt, $role->getUpdatedAt());
-    }
-
-    public function testSetDescription(): void
-    {
-        $role = new Role('test-role');
-        $originalUpdatedAt = $role->getUpdatedAt();
-
-        usleep(1000);
-
-        $role->setDescription('New description');
-
-        $this->assertEquals('New description', $role->getDescription());
-        $this->assertGreaterThan($originalUpdatedAt, $role->getUpdatedAt());
-    }
-
-    public function testAddPermission(): void
-    {
-        $role = new Role('test-role');
-        $permission = new Permission('test-permission');
-        $originalUpdatedAt = $role->getUpdatedAt();
-
-        usleep(1000);
+        $permission = new Permission();
+        $permission->setName('edit-posts');
 
         $role->addPermission($permission);
 
         $this->assertTrue($role->getPermissions()->contains($permission));
-        $this->assertGreaterThan($originalUpdatedAt, $role->getUpdatedAt());
-    }
-
-    public function testAddDuplicatePermission(): void
-    {
-        $role = new Role('test-role');
-        $permission = new Permission('test-permission');
-
-        $role->addPermission($permission);
-        $role->addPermission($permission); // Add same permission again
-
-        $this->assertCount(1, $role->getPermissions());
-    }
-
-    public function testRemovePermission(): void
-    {
-        $role = new Role('test-role');
-        $permission = new Permission('test-permission');
-
-        $role->addPermission($permission);
-        $this->assertTrue($role->getPermissions()->contains($permission));
-
-        usleep(1000);
-        $originalUpdatedAt = $role->getUpdatedAt();
-        usleep(1000);
-
-        $role->removePermission($permission);
-
-        $this->assertFalse($role->getPermissions()->contains($permission));
-        $this->assertGreaterThan($originalUpdatedAt, $role->getUpdatedAt());
-    }
-
-    public function testRemoveNonExistentPermission(): void
-    {
-        $role = new Role('test-role');
-        $permission = new Permission('test-permission');
-
-        $role->removePermission($permission); // Remove permission that wasn't added
-
-        $this->assertCount(0, $role->getPermissions());
+        $this->assertTrue($permission->getRoles()->contains($role));
     }
 
     public function testHasPermission(): void
     {
-        $role = new Role('test-role');
-        $permission = new Permission('test-permission');
+        $role = new Role();
+        $role->setName('admin');
 
-        $this->assertFalse($role->hasPermission($permission));
+        $permission = new Permission();
+        $permission->setName('edit-posts');
 
         $role->addPermission($permission);
 
-        $this->assertTrue($role->hasPermission($permission));
+        $this->assertTrue($role->hasPermission('edit-posts'));
+        $this->assertFalse($role->hasPermission('delete-posts'));
     }
 
-    public function testHasPermissionByName(): void
+    public function testRemovePermission(): void
     {
-        $role = new Role('test-role');
-        $permission = new Permission('edit-posts');
+        $role = new Role();
+        $role->setName('admin');
 
-        $this->assertFalse($role->hasPermissionByName('edit-posts'));
+        $permission = new Permission();
+        $permission->setName('edit-posts');
 
         $role->addPermission($permission);
+        $role->removePermission($permission);
 
-        $this->assertTrue($role->hasPermissionByName('edit-posts'));
-        $this->assertFalse($role->hasPermissionByName('delete-posts'));
+        $this->assertFalse($role->getPermissions()->contains($permission));
+        $this->assertFalse($role->hasPermission('edit-posts'));
     }
 }

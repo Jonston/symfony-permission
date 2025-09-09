@@ -18,21 +18,22 @@ class PermissionRepository extends ServiceEntityRepository
         parent::__construct($registry, Permission::class);
     }
 
-    public function save(Permission $permission): void
-    {
-        $this->getEntityManager()->persist($permission);
-        $this->getEntityManager()->flush();
-    }
-
-    public function remove(Permission $permission): void
-    {
-        $this->getEntityManager()->remove($permission);
-        $this->getEntityManager()->flush();
-    }
-
     public function findByName(string $name): ?Permission
     {
         return $this->findOneBy(['name' => $name]);
+    }
+
+    /**
+     * @param string[] $names
+     * @return Permission[]
+     */
+    public function findByNames(array $names): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.name IN (:names)')
+            ->setParameter('names', $names)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -46,16 +47,15 @@ class PermissionRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    /**
-     * @param string[] $names
-     * @return Permission[]
-     */
-    public function findByNames(array $names): array
+    public function save(Permission $permission): void
     {
-        return $this->createQueryBuilder('p')
-            ->where('p.name IN (:names)')
-            ->setParameter('names', $names)
-            ->getQuery()
-            ->getResult();
+        $this->getEntityManager()->persist($permission);
+        $this->getEntityManager()->flush();
+    }
+
+    public function remove(Permission $permission): void
+    {
+        $this->getEntityManager()->remove($permission);
+        $this->getEntityManager()->flush();
     }
 }

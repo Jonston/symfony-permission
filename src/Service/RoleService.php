@@ -4,120 +4,180 @@ declare(strict_types=1);
 
 namespace Jonston\SymfonyPermission\Service;
 
-use Jonston\SymfonyPermission\Entity\Permission;
+use Doctrine\ORM\EntityManagerInterface;
+use Jonston\SymfonyPermission\Entity\ModelHasRole;
 use Jonston\SymfonyPermission\Entity\Role;
 use Jonston\SymfonyPermission\Repository\RoleRepository;
 
 class RoleService implements RoleServiceInterface
 {
+    private EntityManagerInterface $entityManager;
+    private RoleRepository $roleRepository;
+
     public function __construct(
-        private readonly RoleRepository $roleRepository,
-        private readonly PermissionServiceInterface $permissionService
+        EntityManagerInterface $entityManager,
+        RoleRepository $roleRepository
     ) {
+        $this->entityManager = $entityManager;
+        $this->roleRepository = $roleRepository;
     }
 
-    public function createRole(string $name, ?string $description = null): Role
+    public function create(string $name, ?string $guardName = null): Role
     {
-        $existingRole = $this->roleRepository->findByName($name);
-        if ($existingRole) {
-            throw new \InvalidArgumentException(sprintf('Role "%s" already exists', $name));
-        }
-
-        $role = new Role($name, $description);
-        $this->roleRepository->save($role);
-
-        return $role;
-    }
-
-    public function updateRole(Role $role, string $name, ?string $description = null): Role
-    {
-        $existingRole = $this->roleRepository->findByName($name);
-        if ($existingRole && $existingRole->getId() !== $role->getId()) {
-            throw new \InvalidArgumentException(sprintf('Role "%s" already exists', $name));
-        }
-
+        $role = new Role();
         $role->setName($name);
-        $role->setDescription($description);
-        $this->roleRepository->save($role);
+        if ($guardName) {
+            $role->setGuardName($guardName);
+        }
+
+        $this->entityManager->persist($role);
+        $this->entityManager->flush();
 
         return $role;
     }
 
-    public function deleteRole(Role $role): void
+    public function findByName(string $name): ?Role
     {
-        $this->roleRepository->remove($role);
+        return $this->roleRepository->findOneBy(['name' => $name]);
     }
 
-    public function findRoleByName(string $name): ?Role
-    {
-        return $this->roleRepository->findByName($name);
-    }
-
-    public function findRoleById(int $id): ?Role
+    public function findById(int $id): ?Role
     {
         return $this->roleRepository->find($id);
     }
 
-    public function getAllRoles(): array
+    public function getAll(): array
     {
-        return $this->roleRepository->findAllOrderedByName();
+        return $this->roleRepository->findAll();
     }
 
-    public function findRolesByNames(array $names): array
+    public function update(Role $role): Role
     {
-        return $this->roleRepository->findByNames($names);
-    }
-
-    public function assignPermissionToRole(Role $role, Permission $permission): Role
-    {
-        $role->addPermission($permission);
-        $this->roleRepository->save($role);
-
+        $this->entityManager->flush();
         return $role;
     }
 
-    public function revokePermissionFromRole(Role $role, Permission $permission): Role
+    public function delete(Role $role): void
     {
-        $role->removePermission($permission);
-        $this->roleRepository->save($role);
-
-        return $role;
+        $this->entityManager->remove($role);
+        $this->entityManager->flush();
     }
 
-    public function assignPermissionsToRole(Role $role, array $permissions): Role
+    /**
+     * Assign role to a model
+     */
+    public function assignRoleTo(object $model, string $roleName): void
     {
-        foreach ($permissions as $permission) {
-            $role->addPermission($permission);
-        }
-        $this->roleRepository->save($role);
-
-        return $role;
-    }
-
-    public function assignPermissionsByNamesToRole(Role $role, array $permissionNames): Role
-    {
-        $permissions = $this->permissionService->findPermissionsByNames($permissionNames);
-
-        $foundNames = array_map(fn(Permission $p) => $p->getName(), $permissions);
-        $notFoundNames = array_diff($permissionNames, $foundNames);
-
-        if (!empty($notFoundNames)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Permissions not found: %s',
-                implode(', ', $notFoundNames)
-            ));
+        $role = $this->findByName($roleName);
+        if (!$role) {
+            throw new \InvalidArgumentException("Role '{$roleName}' not found");
         }
 
-        return $this->assignPermissionsToRole($role, $permissions);
+        $existing = $this->entityManager->getRepository(ModelHasRole::class)
+            ->findOneBy([
+                'role' => $role,
+                'modelType' => get_class($model),
+                'modelId' => $model->getId()
+            ]);
+
+        if ($existing) {
+            return;
+        }
+
+        $modelHasRole = new ModelHasRole();
+        $modelHasRole->setRole($role);
+        $modelHasRole->setModelType(get_class($model));
+        $modelHasRole->setModelId($model->getId());
+
+        $this->entityManager->persist($modelHasRole);
+        $this->entityManager->flush();
     }
 
-    public function revokeAllPermissionsFromRole(Role $role): Role
+    /**
+     * Remove role from a model
+     */
+    public function removeRoleFrom(object $model, string $roleName): void
     {
-        foreach ($role->getPermissions() as $permission) {
-            $role->removePermission($permission);
+        $role = $this->findByName($roleName);
+        if (!$role) {
+            return;
         }
-        $this->roleRepository->save($role);
 
-        return $role;
+        $modelHasRole = $this->entityManager->getRepository(ModelHasRole::class)
+            ->findOneBy([
+                'role' => $role,
+                'modelType' => get_class($model),
+                'modelId' => $model->getId()
+            ]);
+
+        if ($modelHasRole) {
+            $this->entityManager->remove($modelHasRole);
+            $this->entityManager->flush();
+        }
+    }
+
+    /**
+     * Check if model has role
+     */
+    public function hasRole(object $model, string $roleName): bool
+    {
+        $role = $this->findByName($roleName);
+        if (!$role) {
+            return false;
+        }
+
+        $modelHasRole = $this->entityManager->getRepository(ModelHasRole::class)
+            ->findOneBy([
+                'role' => $role,
+                'modelType' => get_class($model),
+                'modelId' => $model->getId()
+            ]);
+
+        return $modelHasRole !== null;
+    }
+
+    /**
+     * Get all roles for a model
+     */
+    public function getModelRoles(object $model): array
+    {
+        $modelHasRoles = $this->entityManager->getRepository(ModelHasRole::class)
+            ->findBy([
+                'modelType' => get_class($model),
+                'modelId' => $model->getId()
+            ]);
+
+        return array_map(fn($mhr) => $mhr->getRole()->getName(), $modelHasRoles);
+    }
+
+    /**
+     * Sync roles for a model (remove all existing and assign new ones)
+     */
+    public function syncRoles(object $model, array $roleNames): void
+    {
+        // Remove all existing roles
+        $existingModelHasRoles = $this->entityManager->getRepository(ModelHasRole::class)
+            ->findBy([
+                'modelType' => get_class($model),
+                'modelId' => $model->getId()
+            ]);
+
+        foreach ($existingModelHasRoles as $modelHasRole) {
+            $this->entityManager->remove($modelHasRole);
+        }
+
+        // Assign new roles
+        foreach ($roleNames as $roleName) {
+            $role = $this->findByName($roleName);
+            if ($role) {
+                $modelHasRole = new ModelHasRole();
+                $modelHasRole->setRole($role);
+                $modelHasRole->setModelType(get_class($model));
+                $modelHasRole->setModelId($model->getId());
+                $this->entityManager->persist($modelHasRole);
+            }
+        }
+
+        $this->entityManager->flush();
     }
 }

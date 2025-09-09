@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Jonston\SymfonyPermission\Tests\Service;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Jonston\SymfonyPermission\Entity\Permission;
 use Jonston\SymfonyPermission\Repository\PermissionRepository;
 use Jonston\SymfonyPermission\Service\PermissionService;
@@ -12,215 +13,123 @@ use PHPUnit\Framework\TestCase;
 
 class PermissionServiceTest extends TestCase
 {
-    private PermissionRepository|MockObject $permissionRepository;
     private PermissionService $permissionService;
+    private EntityManagerInterface|MockObject $entityManager;
+    private PermissionRepository|MockObject $permissionRepository;
 
     protected function setUp(): void
     {
+        $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->permissionRepository = $this->createMock(PermissionRepository::class);
-        $this->permissionService = new PermissionService($this->permissionRepository);
+
+        $this->permissionService = new PermissionService(
+            $this->entityManager,
+            $this->permissionRepository
+        );
     }
 
     public function testCreatePermission(): void
     {
-        $name = 'edit-posts';
-        $description = 'Permission to edit posts';
+        $this->entityManager->expects($this->once())
+            ->method('persist');
+        $this->entityManager->expects($this->once())
+            ->method('flush');
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with($name)
-            ->willReturn(null);
+        $permission = $this->permissionService->create('test-permission', 'web');
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('save')
-            ->with($this->callback(function (Permission $permission) use ($name, $description) {
-                return $permission->getName() === $name && $permission->getDescription() === $description;
-            }));
-
-        $result = $this->permissionService->createPermission($name, $description);
-
-        $this->assertInstanceOf(Permission::class, $result);
-        $this->assertEquals($name, $result->getName());
-        $this->assertEquals($description, $result->getDescription());
+        $this->assertInstanceOf(Permission::class, $permission);
+        $this->assertEquals('test-permission', $permission->getName());
+        $this->assertEquals('web', $permission->getGuardName());
     }
 
-    public function testCreatePermissionWithoutDescription(): void
+    public function testFindByName(): void
     {
-        $name = 'delete-posts';
+        $permission = new Permission();
+        $permission->setName('test-permission');
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with($name)
-            ->willReturn(null);
+        $this->permissionRepository->expects($this->once())
+            ->method('findOneBy')
+            ->with(['name' => 'test-permission'])
+            ->willReturn($permission);
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('save');
+        $result = $this->permissionService->findByName('test-permission');
 
-        $result = $this->permissionService->createPermission($name);
-
-        $this->assertEquals($name, $result->getName());
-        $this->assertNull($result->getDescription());
+        $this->assertEquals($permission, $result);
     }
 
-    public function testCreatePermissionWithExistingName(): void
+    public function testGetAll(): void
     {
-        $name = 'existing-permission';
-        $existingPermission = new Permission($name);
+        $permissions = [new Permission(), new Permission()];
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with($name)
-            ->willReturn($existingPermission);
+        $this->permissionRepository->expects($this->once())
+            ->method('findAll')
+            ->willReturn($permissions);
 
-        $this->permissionRepository
-            ->expects($this->never())
-            ->method('save');
+        $result = $this->permissionService->getAll();
 
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Permission "existing-permission" already exists');
-
-        $this->permissionService->createPermission($name);
-    }
-
-    public function testUpdatePermission(): void
-    {
-        $permission = new Permission('old-name');
-        $newName = 'new-name';
-        $newDescription = 'New description';
-
-        // Mock reflection to set ID for the permission
-        $reflection = new \ReflectionClass($permission);
-        $idProperty = $reflection->getProperty('id');
-        $idProperty->setAccessible(true);
-        $idProperty->setValue($permission, 1);
-
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with($newName)
-            ->willReturn(null);
-
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('save')
-            ->with($permission);
-
-        $result = $this->permissionService->updatePermission($permission, $newName, $newDescription);
-
-        $this->assertEquals($newName, $result->getName());
-        $this->assertEquals($newDescription, $result->getDescription());
-    }
-
-    public function testUpdatePermissionWithExistingName(): void
-    {
-        $permission = new Permission('old-name');
-        $existingPermission = new Permission('existing-name');
-
-        // Set different IDs
-        $reflection = new \ReflectionClass($permission);
-        $idProperty = $reflection->getProperty('id');
-        $idProperty->setAccessible(true);
-        $idProperty->setValue($permission, 1);
-
-        $reflection = new \ReflectionClass($existingPermission);
-        $idProperty = $reflection->getProperty('id');
-        $idProperty->setAccessible(true);
-        $idProperty->setValue($existingPermission, 2);
-
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with('existing-name')
-            ->willReturn($existingPermission);
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Permission "existing-name" already exists');
-
-        $this->permissionService->updatePermission($permission, 'existing-name');
+        $this->assertEquals($permissions, $result);
     }
 
     public function testDeletePermission(): void
     {
-        $permission = new Permission('test-permission');
+        $permission = new Permission();
 
-        $this->permissionRepository
-            ->expects($this->once())
+        $this->entityManager->expects($this->once())
             ->method('remove')
             ->with($permission);
+        $this->entityManager->expects($this->once())
+            ->method('flush');
 
-        $this->permissionService->deletePermission($permission);
+        $this->permissionService->delete($permission);
     }
 
-    public function testFindPermissionByName(): void
+    public function testGivePermissionToModel(): void
     {
-        $name = 'test-permission';
-        $permission = new Permission($name);
+        $model = new class {
+            private int $id = 1;
+            public function getId(): int { return $this->id; }
+        };
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByName')
-            ->with($name)
+        $permission = new Permission();
+        $permission->setName('test-permission');
+
+        $this->permissionRepository->expects($this->once())
+            ->method('findOneBy')
+            ->with(['name' => 'test-permission'])
             ->willReturn($permission);
 
-        $result = $this->permissionService->findPermissionByName($name);
+        $modelHasPermissionRepo = $this->createMock(\Doctrine\ORM\EntityRepository::class);
+        $modelHasPermissionRepo->expects($this->once())
+            ->method('findOneBy')
+            ->willReturn(null); // No existing assignment
 
-        $this->assertSame($permission, $result);
+        $this->entityManager->expects($this->any())
+            ->method('getRepository')
+            ->willReturn($modelHasPermissionRepo);
+
+        $this->entityManager->expects($this->once())
+            ->method('persist');
+        $this->entityManager->expects($this->once())
+            ->method('flush');
+
+        $this->permissionService->givePermissionTo($model, 'test-permission');
     }
 
-    public function testFindPermissionById(): void
+    public function testGivePermissionToModelThrowsExceptionForNonExistentPermission(): void
     {
-        $id = 1;
-        $permission = new Permission('test-permission');
+        $model = new class {
+            private int $id = 1;
+            public function getId(): int { return $this->id; }
+        };
 
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('find')
-            ->with($id)
-            ->willReturn($permission);
+        $this->permissionRepository->expects($this->once())
+            ->method('findOneBy')
+            ->with(['name' => 'non-existent'])
+            ->willReturn(null);
 
-        $result = $this->permissionService->findPermissionById($id);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Permission 'non-existent' not found");
 
-        $this->assertSame($permission, $result);
-    }
-
-    public function testGetAllPermissions(): void
-    {
-        $permissions = [
-            new Permission('permission1'),
-            new Permission('permission2'),
-        ];
-
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findAllOrderedByName')
-            ->willReturn($permissions);
-
-        $result = $this->permissionService->getAllPermissions();
-
-        $this->assertSame($permissions, $result);
-    }
-
-    public function testFindPermissionsByNames(): void
-    {
-        $names = ['permission1', 'permission2'];
-        $permissions = [
-            new Permission('permission1'),
-            new Permission('permission2'),
-        ];
-
-        $this->permissionRepository
-            ->expects($this->once())
-            ->method('findByNames')
-            ->with($names)
-            ->willReturn($permissions);
-
-        $result = $this->permissionService->findPermissionsByNames($names);
-
-        $this->assertSame($permissions, $result);
+        $this->permissionService->givePermissionTo($model, 'non-existent');
     }
 }

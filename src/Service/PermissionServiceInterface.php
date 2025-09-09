@@ -8,24 +8,27 @@ use Jonston\SymfonyPermission\Entity\Permission;
 
 interface PermissionServiceInterface
 {
-    public function createPermission(string $name, ?string $description = null): Permission;
+    public function create(string $name, ?string $guardName = null): Permission;
 
-    public function updatePermission(Permission $permission, string $name, ?string $description = null): Permission;
+    public function findByName(string $name): ?Permission;
 
-    public function deletePermission(Permission $permission): void;
+    public function findById(int $id): ?Permission;
 
-    public function findPermissionByName(string $name): ?Permission;
+    public function getAll(): array;
 
-    public function findPermissionById(int $id): ?Permission;
+    public function update(Permission $permission): Permission;
 
-    /**
-     * @return Permission[]
-     */
-    public function getAllPermissions(): array;
+    public function delete(Permission $permission): void;
 
-    /**
-     * @param string[] $names
-     * @return Permission[]
-     */
-    public function findPermissionsByNames(array $names): array;
+    public function givePermissionTo(object $model, string $permissionName): void;
+
+    public function revokePermissionFrom(object $model, string $permissionName): void;
+
+    public function hasPermission(object $model, string $permissionName): bool;
+
+    public function hasDirectPermission(object $model, string $permissionName): bool;
+
+    public function hasPermissionViaRole(object $model, string $permissionName): bool;
+
+    public function getModelPermissions(object $model): array;
 }

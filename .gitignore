@@ -1,0 +1,57 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Composer
+composer.lock
+composer.phar
+
+# IDE files
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test artifacts
+/phpunit.xml
+/phpunit.xml.dist
+/.phpunit.result.cache
+/tests/_output/
+/tests/_support/_generated/
+
+# Logs
+*.log
+/var/log/
+
+# Cache
+/var/cache/
+/.cache/
+
+# Coverage reports
+/coverage/
+/clover.xml
+/coverage.xml
+
+# Build artifacts
+/build/
+/dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+/tmp/
+*.tmp
+*.temp

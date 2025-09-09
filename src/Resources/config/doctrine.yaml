@@ -1,0 +1,13 @@
+doctrine:
+  dbal:
+    types:
+      # Add custom types if needed
+
+  orm:
+    mappings:
+      JonstonSymfonyPermission:
+        is_bundle: false
+        type: attribute
+        dir: '%kernel.project_dir%/vendor/jonston/symfony-permission/src/Entity'
+        prefix: 'Jonston\SymfonyPermission\Entity'
+        alias: JonstonSymfonyPermission

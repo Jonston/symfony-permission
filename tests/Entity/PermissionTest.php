@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Jonston\SymfonyPermission\Tests\Entity;
 
 use Jonston\SymfonyPermission\Entity\Permission;
@@ -10,60 +8,27 @@ use PHPUnit\Framework\TestCase;
 
 class PermissionTest extends TestCase
 {
-    public function testPermissionCreation(): void
+    public function testDescription(): void
     {
-        $permission = new Permission('edit-posts', 'Permission to edit posts');
-
-        $this->assertNull($permission->getId());
-        $this->assertEquals('edit-posts', $permission->getName());
-        $this->assertEquals('Permission to edit posts', $permission->getDescription());
-        $this->assertInstanceOf(\DateTimeImmutable::class, $permission->getCreatedAt());
-        $this->assertInstanceOf(\DateTimeImmutable::class, $permission->getUpdatedAt());
-        $this->assertCount(0, $permission->getRoles());
-    }
-
-    public function testPermissionCreationWithoutDescription(): void
-    {
-        $permission = new Permission('delete-posts');
-
-        $this->assertEquals('delete-posts', $permission->getName());
+        $permission = new Permission();
         $this->assertNull($permission->getDescription());
+        $permission->setDescription('desc');
+        $this->assertEquals('desc', $permission->getDescription());
     }
 
-    public function testSetName(): void
+    public function testToString(): void
     {
-        $permission = new Permission('old-name');
-        $originalUpdatedAt = $permission->getUpdatedAt();
-
-        // Wait a moment to ensure different timestamps
-        usleep(1000);
-
-        $permission->setName('new-name');
-
-        $this->assertEquals('new-name', $permission->getName());
-        $this->assertGreaterThan($originalUpdatedAt, $permission->getUpdatedAt());
+        $permission = new Permission();
+        $permission->setName('edit');
+        $this->assertEquals('edit', (string)$permission);
     }
 
-    public function testSetDescription(): void
+    public function testRolesRelation(): void
     {
-        $permission = new Permission('test-permission');
-        $originalUpdatedAt = $permission->getUpdatedAt();
-
-        usleep(1000);
-
-        $permission->setDescription('New description');
-
-        $this->assertEquals('New description', $permission->getDescription());
-        $this->assertGreaterThan($originalUpdatedAt, $permission->getUpdatedAt());
-    }
-
-    public function testRoleRelationship(): void
-    {
-        $permission = new Permission('test-permission');
-        $role = new Role('test-role');
-
+        $permission = new Permission();
+        $role = new Role();
         $role->addPermission($permission);
-
-        $this->assertTrue($permission->getRoles()->contains($role));
+        $this->assertTrue($role->hasPermission($permission));
     }
 }
+

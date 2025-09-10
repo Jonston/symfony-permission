@@ -4,120 +4,59 @@ declare(strict_types=1);
 
 namespace Jonston\SymfonyPermission\Service;
 
-use Jonston\SymfonyPermission\Entity\Permission;
+use Doctrine\ORM\EntityManagerInterface;
+use Jonston\SymfonyPermission\Dto\Role\CreateRoleDto;
+use Jonston\SymfonyPermission\Dto\Role\SearchRoleDto;
+use Jonston\SymfonyPermission\Dto\Role\UpdateRoleDto;
 use Jonston\SymfonyPermission\Entity\Role;
 use Jonston\SymfonyPermission\Repository\RoleRepository;
 
-class RoleService implements RoleServiceInterface
+class RoleService
 {
-    public function __construct(
-        private readonly RoleRepository $roleRepository,
-        private readonly PermissionServiceInterface $permissionService
-    ) {
+    private readonly RoleRepository $roleRepository;
+    private readonly EntityManagerInterface $entityManager;
+
+    public function __construct(RoleRepository $roleRepository, EntityManagerInterface $entityManager)
+    {
+        $this->roleRepository = $roleRepository;
+        $this->entityManager = $entityManager;
     }
 
-    public function createRole(string $name, ?string $description = null): Role
+    public function createRole(CreateRoleDto $data): Role
     {
-        $existingRole = $this->roleRepository->findByName($name);
-        if ($existingRole) {
-            throw new \InvalidArgumentException(sprintf('Role "%s" already exists', $name));
-        }
-
-        $role = new Role($name, $description);
-        $this->roleRepository->save($role);
-
+        $role = new Role();
+        $role->setName($data->name);
+        $role->setDescription($data->description);
+        $this->entityManager->persist($role);
+        $this->entityManager->flush();
         return $role;
     }
 
-    public function updateRole(Role $role, string $name, ?string $description = null): Role
+    public function updateRole(Role $role, UpdateRoleDto $data): Role
     {
-        $existingRole = $this->roleRepository->findByName($name);
-        if ($existingRole && $existingRole->getId() !== $role->getId()) {
-            throw new \InvalidArgumentException(sprintf('Role "%s" already exists', $name));
-        }
-
-        $role->setName($name);
-        $role->setDescription($description);
-        $this->roleRepository->save($role);
-
+        $role->setName($data->name);
+        $role->setDescription($data->description);
+        $this->entityManager->flush();
         return $role;
     }
 
     public function deleteRole(Role $role): void
     {
-        $this->roleRepository->remove($role);
+        $this->entityManager->remove($role);
+        $this->entityManager->flush();
     }
 
-    public function findRoleByName(string $name): ?Role
+    public function findRole(SearchRoleDto $params): ?Role
     {
-        return $this->roleRepository->findByName($name);
-    }
-
-    public function findRoleById(int $id): ?Role
-    {
-        return $this->roleRepository->find($id);
+        $criteria = [];
+        if ($params->name !== null) {
+            $criteria['name'] = $params->name;
+        }
+        return $this->roleRepository->findOneBy($criteria);
     }
 
     public function getAllRoles(): array
     {
         return $this->roleRepository->findAllOrderedByName();
-    }
-
-    public function findRolesByNames(array $names): array
-    {
-        return $this->roleRepository->findByNames($names);
-    }
-
-    public function assignPermissionToRole(Role $role, Permission $permission): Role
-    {
-        $role->addPermission($permission);
-        $this->roleRepository->save($role);
-
-        return $role;
-    }
-
-    public function revokePermissionFromRole(Role $role, Permission $permission): Role
-    {
-        $role->removePermission($permission);
-        $this->roleRepository->save($role);
-
-        return $role;
-    }
-
-    public function assignPermissionsToRole(Role $role, array $permissions): Role
-    {
-        foreach ($permissions as $permission) {
-            $role->addPermission($permission);
-        }
-        $this->roleRepository->save($role);
-
-        return $role;
-    }
-
-    public function assignPermissionsByNamesToRole(Role $role, array $permissionNames): Role
-    {
-        $permissions = $this->permissionService->findPermissionsByNames($permissionNames);
-
-        $foundNames = array_map(fn(Permission $p) => $p->getName(), $permissions);
-        $notFoundNames = array_diff($permissionNames, $foundNames);
-
-        if (!empty($notFoundNames)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Permissions not found: %s',
-                implode(', ', $notFoundNames)
-            ));
-        }
-
-        return $this->assignPermissionsToRole($role, $permissions);
-    }
-
-    public function revokeAllPermissionsFromRole(Role $role): Role
-    {
-        foreach ($role->getPermissions() as $permission) {
-            $role->removePermission($permission);
-        }
-        $this->roleRepository->save($role);
-
-        return $role;
     }
 }

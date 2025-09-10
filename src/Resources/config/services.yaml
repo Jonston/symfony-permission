@@ -2,19 +2,21 @@ services:
   _defaults:
     autowire: true
     autoconfigure: true
-    public: false
 
-  Jonston\SymfonyPermission\Repository\:
-    resource: '../../Repository/*'
+  Jonston\SymfonyPermission\:
+    resource: '../'
+    exclude:
+      - '../Entity/'
+      - '../Tests/'
+
+  Jonston\SymfonyPermission\Service\PermissionService:
+    public: true
+
+  Jonston\SymfonyPermission\Service\RoleService:
+    public: true
+
+  Jonston\SymfonyPermission\Repository\PermissionRepository:
     tags: ['doctrine.repository_service']
 
-  Jonston\SymfonyPermission\Service\:
-    resource: '../../Service/*'
-    exclude: '../../Service/*Interface.php'
-
-  # Explicit service definitions
-  Jonston\SymfonyPermission\Service\PermissionServiceInterface:
-    alias: Jonston\SymfonyPermission\Service\PermissionService
-
-  Jonston\SymfonyPermission\Service\RoleServiceInterface:
-    alias: Jonston\SymfonyPermission\Service\RoleService
+  Jonston\SymfonyPermission\Repository\RoleRepository:
+    tags: ['doctrine.repository_service']

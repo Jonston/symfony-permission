@@ -1,30 +1,23 @@
 {
     "name": "jonston/symfony-permission",
-    "description": "Basic permission management bundle for Symfony",
+    "description": "A basic permission management bundle for Symfony, similar to spatie/laravel-permission",
     "type": "symfony-bundle",
     "license": "MIT",
-    "keywords": ["symfony", "permissions", "roles", "acl", "security", "bundle"],
-    "homepage": "https://github.com/jonston85/symfony-permission",
     "authors": [
         {
-            "name": "Eugene",
-            "email": "jonston85@gmail.com"
+            "name": "Jonston",
+            "email": "your-email@example.com"
         }
     ],
-    "support": {
-        "issues": "https://github.com/jonston85/symfony-permission/issues",
-        "source": "https://github.com/jonston85/symfony-permission"
-    },
     "require": {
-        "php": ">=8.1",
+        "php": "^8.1",
         "symfony/framework-bundle": "^6.0|^7.0",
-        "symfony/security-bundle": "^6.0|^7.0",
-        "doctrine/orm": ">=3.0",
-        "doctrine/doctrine-bundle": "^2.5"
+        "doctrine/orm": "^2.10|^3.0",
+        "doctrine/doctrine-bundle": "^2.5",
+        "symfony/validator": "^7.3"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.0",
-        "symfony/phpunit-bridge": "^6.0|^7.0",
+        "phpunit/phpunit": "^10.0|^11.0",
         "doctrine/doctrine-fixtures-bundle": "^3.4"
     },
     "autoload": {
@@ -36,22 +29,6 @@
         "psr-4": {
             "Jonston\\SymfonyPermission\\Tests\\": "tests/"
         }
-    },
-    "scripts": {
-        "test": "phpunit",
-        "test-coverage": "phpunit --coverage-html coverage",
-        "test-unit": "phpunit tests/Entity tests/Service",
-        "test-watch": "phpunit --watch"
-    },
-    "extra": {
-        "symfony": {
-            "allow-contrib": false,
-            "require": "6.0.*|7.0.*"
-        }
-    },
-    "config": {
-        "sort-packages": true,
-        "preferred-install": "dist"
     },
     "minimum-stability": "stable",
     "prefer-stable": true

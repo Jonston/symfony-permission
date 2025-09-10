@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Jonston\SymfonyPermission\Tests\Entity;
 
 use Jonston\SymfonyPermission\Entity\Permission;
@@ -10,52 +8,27 @@ use PHPUnit\Framework\TestCase;
 
 class PermissionTest extends TestCase
 {
-    public function testPermissionCreation(): void
+    public function testDescription(): void
     {
         $permission = new Permission();
-        $permission->setName('edit-posts');
-        $permission->setGuardName('web');
-
-        $this->assertEquals('edit-posts', $permission->getName());
-        $this->assertEquals('web', $permission->getGuardName());
-        $this->assertInstanceOf(\DateTimeImmutable::class, $permission->getCreatedAt());
-        $this->assertInstanceOf(\DateTimeImmutable::class, $permission->getUpdatedAt());
+        $this->assertNull($permission->getDescription());
+        $permission->setDescription('desc');
+        $this->assertEquals('desc', $permission->getDescription());
     }
 
-    public function testPermissionToString(): void
+    public function testToString(): void
     {
         $permission = new Permission();
-        $permission->setName('edit-posts');
-
-        $this->assertEquals('edit-posts', (string) $permission);
+        $permission->setName('edit');
+        $this->assertEquals('edit', (string)$permission);
     }
 
-    public function testRoleRelationship(): void
+    public function testRolesRelation(): void
     {
         $permission = new Permission();
-        $permission->setName('edit-posts');
-
         $role = new Role();
-        $role->setName('editor');
-
-        $permission->addRole($role);
-
-        $this->assertTrue($permission->getRoles()->contains($role));
-        $this->assertTrue($role->getPermissions()->contains($permission));
-    }
-
-    public function testPermissionRemoveRole(): void
-    {
-        $permission = new Permission();
-        $permission->setName('edit-posts');
-
-        $role = new Role();
-        $role->setName('editor');
-
-        $permission->addRole($role);
-        $permission->removeRole($role);
-
-        $this->assertFalse($permission->getRoles()->contains($role));
-        $this->assertFalse($role->getPermissions()->contains($permission));
+        $role->addPermission($permission);
+        $this->assertTrue($role->hasPermission($permission));
     }
 }
+

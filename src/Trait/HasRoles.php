@@ -11,8 +11,7 @@ trait HasRoles
     use HasPermissions;
 
     protected Collection $roles;
-
-    /** @return Collection<Role> */
+    
     public function getRoles(): Collection
     {
         return $this->roles;

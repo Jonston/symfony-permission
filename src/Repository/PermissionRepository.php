@@ -17,4 +17,15 @@ class PermissionRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Permission::class);
     }
+
+    /**
+     * @return Permission[]
+     */
+    public function findAllOrderedByName(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

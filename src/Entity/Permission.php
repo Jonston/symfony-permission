@@ -21,14 +21,14 @@ class Permission
     #[ORM\Column(type: 'string', length: 255, unique: true)]
     private string $name;
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private ?string $guardName = null;
-
     #[ORM\Column(type: 'datetime_immutable')]
     private DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private DateTimeImmutable $updatedAt;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $description = null;
 
     /**
      * @var Collection<int, Role>
@@ -41,6 +41,7 @@ class Permission
         $this->roles = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
+        $this->description = null;
     }
 
     public function getId(): ?int
@@ -56,19 +57,6 @@ class Permission
     public function setName(string $name): self
     {
         $this->name = $name;
-        $this->updatedAt = new DateTimeImmutable();
-
-        return $this;
-    }
-
-    public function getGuardName(): ?string
-    {
-        return $this->guardName;
-    }
-
-    public function setGuardName(?string $guardName): self
-    {
-        $this->guardName = $guardName;
         $this->updatedAt = new DateTimeImmutable();
 
         return $this;
@@ -92,69 +80,20 @@ class Permission
         return $this->roles;
     }
 
-    /**
-     * @return Collection<int, ModelHasPermission>
-     */
-    public function getModelHasPermissions(): Collection
+    public function getDescription(): ?string
     {
-        return $this->modelHasPermissions;
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
+        $this->updatedAt = new DateTimeImmutable();
+        return $this;
     }
 
     public function __toString(): string
     {
         return $this->name;
-    }
-
-    // Internal methods for Doctrine collection management (used by services only)
-
-    /**
-     * @internal Used by services only - do not call directly
-     */
-    public function addRole(Role $role): self
-    {
-        if ( ! $this->roles->contains($role)) {
-            $this->roles->add($role);
-        }
-        $this->updatedAt = new DateTimeImmutable();
-
-        return $this;
-    }
-
-    /**
-     * @internal Used by services only - do not call directly
-     */
-    public function removeRole(Role $role): self
-    {
-        $this->roles->removeElement($role);
-        $this->updatedAt = new DateTimeImmutable();
-
-        return $this;
-    }
-
-    /**
-     * @internal Used by services only - do not call directly
-     */
-    public function addModelHasPermission(ModelHasPermission $modelHasPermission): self
-    {
-        if ( ! $this->modelHasPermissions->contains($modelHasPermission)) {
-            $this->modelHasPermissions->add($modelHasPermission);
-            $modelHasPermission->setPermission($this);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @internal Used by services only - do not call directly
-     */
-    public function removeModelHasPermission(ModelHasPermission $modelHasPermission): self
-    {
-        if ($this->modelHasPermissions->removeElement($modelHasPermission)) {
-            if ($modelHasPermission->getPermission() === $this) {
-                $modelHasPermission->setPermission(null);
-            }
-        }
-
-        return $this;
     }
 }

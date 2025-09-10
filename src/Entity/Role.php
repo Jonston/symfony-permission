@@ -31,6 +31,9 @@ class Role implements HasPermissionsInterface
     #[ORM\Column(type: 'datetime_immutable')]
     private DateTimeImmutable $updatedAt;
 
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $description;
+
     /**
      * @var Collection<int, Permission>
      */
@@ -47,6 +50,7 @@ class Role implements HasPermissionsInterface
         $this->permissions = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
+        $this->description = null;
     }
 
     public function getId(): ?int
@@ -75,6 +79,18 @@ class Role implements HasPermissionsInterface
     public function getUpdatedAt(): DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
+        $this->updatedAt = new DateTimeImmutable();
+        return $this;
     }
 
     public function __toString(): string

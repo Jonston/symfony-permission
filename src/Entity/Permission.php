@@ -36,16 +36,9 @@ class Permission
     #[ORM\ManyToMany(targetEntity: Role::class, mappedBy: 'permissions')]
     private Collection $roles;
 
-    /**
-     * @var Collection<int, ModelHasPermission>
-     */
-    #[ORM\OneToMany(mappedBy: 'permission', targetEntity: ModelHasPermission::class, cascade: ['persist', 'remove'])]
-    private Collection $modelHasPermissions;
-
     public function __construct()
     {
         $this->roles = new ArrayCollection();
-        $this->modelHasPermissions = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
     }
@@ -119,7 +112,7 @@ class Permission
      */
     public function addRole(Role $role): self
     {
-        if (!$this->roles->contains($role)) {
+        if ( ! $this->roles->contains($role)) {
             $this->roles->add($role);
         }
         $this->updatedAt = new DateTimeImmutable();
@@ -143,7 +136,7 @@ class Permission
      */
     public function addModelHasPermission(ModelHasPermission $modelHasPermission): self
     {
-        if (!$this->modelHasPermissions->contains($modelHasPermission)) {
+        if ( ! $this->modelHasPermissions->contains($modelHasPermission)) {
             $this->modelHasPermissions->add($modelHasPermission);
             $modelHasPermission->setPermission($this);
         }

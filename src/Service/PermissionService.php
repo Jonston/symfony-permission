@@ -4,61 +4,105 @@ declare(strict_types=1);
 
 namespace Jonston\SymfonyPermission\Service;
 
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\EntityManagerInterface;
+use Jonston\SymfonyPermission\Contract\HasPermissionsInterface;
 use Jonston\SymfonyPermission\Entity\Permission;
 use Jonston\SymfonyPermission\Repository\PermissionRepository;
 
-class PermissionService implements PermissionServiceInterface
+class PermissionService
 {
+    private readonly PermissionRepository $permissionRepository;
+    private readonly EntityManagerInterface $entityManager;
+
     public function __construct(
-        private readonly PermissionRepository $permissionRepository
-    ) {
-    private EntityManagerInterface $entityManager;
-    private PermissionRepository $permissionRepository;
-
-    }
-        EntityManagerInterface $entityManager,
-        PermissionRepository $permissionRepository
+        PermissionRepository $permissionRepository,
+        EntityManagerInterface $entityManager
+    )
     {
-        $this->entityManager = $entityManager;
         $this->permissionRepository = $permissionRepository;
-        $existingPermission = $this->permissionRepository->findByName($name);
-        if ($existingPermission && $existingPermission->getId() !== $permission->getId()) {
-    public function create(string $name, ?string $guardName = null): Permission
-        }
-        $permission = new Permission();
-        return $permission;
-        if ($guardName) {
-            $permission->setGuardName($guardName);
-        }
+        $this->entityManager = $entityManager;
+    }
 
+    public function createPermission(CreatePermissionDto $data): Permission
+    {
+        $permission = new Permission();
+        $permission->setName($data->name);
         $this->entityManager->persist($permission);
         $this->entityManager->flush();
+
+        return $permission;
+    }
+
+    public function updatePermission(Permission $permission, UpdatePermissionDto $data): Permission
+    {
+    }
+
     public function deletePermission(Permission $permission): void
     {
-        $this->permissionRepository->remove($permission);
+
     }
-    public function findByName(string $name): ?Permission
-    public function findPermissionByName(string $name): ?Permission
-        return $this->permissionRepository->findOneBy(['name' => $name]);
-        return $this->permissionRepository->findByName($name);
+
+    public function findPermission(SerachPermissionDto $params): ?Permission
+    {
     }
-    public function findById(int $id): ?Permission
+
     public function getAllPermissions(): array
     {
         return $this->permissionRepository->findAllOrderedByName();
     }
-    public function getAll(): array
-    public function findPermissionsByNames(array $names): array
-        return $this->permissionRepository->findAll();
-        return $this->permissionRepository->findByNames($names);
-    }
-    public function update(Permission $permission): Permission
 
-        $this->entityManager->flush();
-        return $permission;
-    }
-
-    public function delete(Permission $permission): void
+    public function assignPermissionTo(
+        HasPermissionsInterface $entity,
+        string|Permission $permissions
+    ): void
     {
-        $this->entityManager->remove($permission);
-        $this->entityManager->flush();
+    }
+
+    public function assignPermissionsTo(
+        HasPermissionsInterface $entity,
+        array|Collection $permissions
+    ): void
+    {
+    }
+
+    public function revokePermissionFrom(
+        HasPermissionsInterface $entity,
+        string|Permission $permissions
+    ): void
+    {
+    }
+
+    public function revokePermissionsFrom(
+        HasPermissionsInterface $entity,
+        array|Collection $permissions
+    ): void
+    {
+    }
+
+    public function hasAllPermissions(
+        HasPermissionsInterface $entity,
+        string|Permission|Collection $permissions
+    ): bool
+    {
+
+    }
+
+    public function hasPermission(
+        HasPermissionsInterface $entity,
+        string|Permission $permissions
+    ): bool
+    {
+    }
+
+    public function hasAnyPermission(
+        HasPermissionsInterface $entity,
+        array|Collection $permissions
+    ): bool
+    {
+    }
+
+    public function resolvePermission(string|Permission $permissions): Permission
+    {
+    }
+}
